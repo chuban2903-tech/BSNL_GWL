@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0C1B2E">
+<title>SDCA Field Manager</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+:root{
+  --ink:#0C1B2E;--ink2:#1E3A5F;--steel:#2563EB;
+  --gold:#D97706;--gold2:#F59E0B;
+  --jade:#059669;--rose:#DC2626;
+  --bg:#EEF3FB;--surf:#fff;--surf2:#F5F9FF;
+  --bdr:#D1DCF0;--bdr2:#E8EFF9;
+  --t1:#0C1B2E;--t2:#334155;--t3:#64748B;--t4:#94A3B8;
+  --sh:0 1px 6px rgba(12,27,46,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--t1);max-width:480px;margin:0 auto;min-height:100vh}
+
+/* STATUS BAR */
+.sb{background:var(--ink);height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:400}
+.sb-l{color:#fff;font-size:11px;font-weight:600;font-family:'Syne',sans-serif}
+.sb-r{font-size:10px;color:rgba(255,255,255,.4)}
+
+/* APP BAR */
+.ab{background:linear-gradient(145deg,#0C1B2E 0%,#1E3A5F 55%,#2563EB 100%);padding:14px 18px 20px;position:sticky;top:28px;z-index:399;box-shadow:0 3px 16px rgba(12,27,46,.4)}
+.ab-tag{font-family:'Syne',sans-serif;font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:3px}
+.ab-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff;line-height:1.2}
+.ab-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.ab-row{display:flex;justify-content:space-between;align-items:flex-start}
+.ab-pill{background:var(--gold2);color:var(--ink);font-family:'Syne',sans-serif;font-size:9.5px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:4px;white-space:nowrap;text-transform:uppercase}
+.prog-t{height:2px;background:rgba(255,255,255,.15);border-radius:1px;margin-top:10px}
+.prog-f{height:2px;background:linear-gradient(90deg,#F59E0B,#FCD34D);border-radius:1px;transition:width .4s;width:0%}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 0}
+.stat{background:var(--surf);border-radius:8px;padding:11px 6px;text-align:center;box-shadow:var(--sh);border:1px solid var(--bdr2)}
+.stat-n{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--steel);line-height:1}
+.stat-l{font-size:9px;color:var(--t4);text-transform:uppercase;letter-spacing:.7px;margin-top:2px;font-weight:600}
+
+/* MAIN */
+.main{padding:12px 14px 110px}
+
+/* SYNC / CONNECT BAR */
+.cbar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:8px;font-size:11.5px;font-weight:500;cursor:pointer;transition:all .25s;border:1px solid transparent;margin:12px 0 14px}
+.cbar.idle{background:#EFF6FF;color:var(--t3);border-color:var(--bdr)}
+.cbar.ok{background:#ECFDF5;color:#065F46;border-color:#A7F3D0}
+.cbar.busy{background:#FFFBEB;color:#92400E;border-color:#FDE68A;animation:pulse 1s ease infinite}
+.cbar.err{background:#FEF2F2;color:#991B1B;border-color:#FECACA}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.idle .cdot{background:var(--t4)}.ok .cdot{background:var(--jade)}.busy .cdot{background:var(--gold2)}.err .cdot{background:var(--rose)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* CARDS */
+.card{background:var(--surf);border-radius:13px;border:1px solid var(--bdr2);box-shadow:var(--sh);margin-bottom:11px;overflow:hidden}
+.chd{display:flex;align-items:center;gap:9px;padding:10px 14px}
+.chd-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;background:rgba(255,255,255,.18)}
+.chd-ttl{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.9px}
+.chd-cnt{margin-left:auto;background:rgba(255,255,255,.22);color:#fff;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:10px}
+.cbdy{padding:14px}
+.hid{background:linear-gradient(90deg,#1E3A5F,#2563EB)}
+.hpp{background:linear-gradient(90deg,#064E3B,#059669)}
+.hbt{background:linear-gradient(90deg,#4C1D95,#7C3AED)}
+.hdg{background:linear-gradient(90deg,#7C2D12,#EA580C)}
+.hac{background:linear-gradient(90deg,#0C4A6E,#0284C7)}
+
+/* ROW DIVIDER for multi-row sites */
+.rdiv{display:flex;align-items:center;gap:8px;margin:14px 0 10px}
+.rdiv:first-child{margin-top:0}
+.rdiv-ln{flex:1;height:1px;background:var(--bdr2)}
+.rdiv-lbl{font-size:9px;font-weight:700;color:var(--steel);text-transform:uppercase;letter-spacing:.8px;background:#EFF6FF;padding:2px 9px;border-radius:10px;border:1px solid #BFDBFE;white-space:nowrap}
+
+/* FIELDS */
+.fl{margin-bottom:10px}.fl:last-child{margin-bottom:0}
+.fl-lb{display:block;font-size:9.5px;font-weight:600;color:var(--t4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.fl-in{width:100%;padding:9px 12px;background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--t1);outline:none;transition:all .18s}
+.fl-in:focus{border-color:var(--steel);box-shadow:0 0 0 3px rgba(37,99,235,.1);background:#fff}
+.fl-in.dirty{border-color:var(--gold2);background:#FFFBEB;box-shadow:0 0 0 2px rgba(245,158,11,.12)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sw{position:relative}
+.fl-sl{width:100%;padding:10px 32px 10px 12px;background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--t1);outline:none;appearance:none;-webkit-appearance:none;cursor:pointer;transition:all .18s}
+.fl-sl:focus{border-color:var(--steel);box-shadow:0 0 0 3px rgba(37,99,235,.1);background:#fff}
+.fl-sl:disabled{opacity:.4;cursor:not-allowed}
+.sch{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--steel);pointer-events:none}
+
+/* TABS */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 13px;border-radius:20px;border:1.5px solid var(--bdr);background:var(--surf2);font-size:11.5px;font-weight:500;color:var(--t3);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .18s}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 2px 10px rgba(12,27,46,.22)}
+
+/* LOADING SPINNER */
+.spin-wrap{text-align:center;padding:28px 0}
+.spin{display:inline-block;width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--steel);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-txt{font-size:12px;color:var(--t4);margin-top:8px}
+
+/* INFO BOX */
+.ibox{display:flex;gap:9px;padding:10px 12px;background:#EFF6FF;border-radius:8px;border-left:3px solid var(--steel);margin-bottom:12px}
+.ibox p{font-size:11.5px;color:var(--t2);line-height:1.55}
+
+/* BOTTOM BAR */
+.bbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--bdr2);padding:10px 14px;display:none;gap:9px;box-shadow:0 -4px 18px rgba(0,0,0,.09);z-index:300}
+.btn{flex:1;padding:12px;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all .18s}
+.btn-p{background:linear-gradient(135deg,var(--ink),var(--steel));color:#fff;box-shadow:0 4px 14px rgba(37,99,235,.28)}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(37,99,235,.38)}
+.btn-p:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-g{background:var(--surf2);color:var(--t3);border:1.5px solid var(--bdr)}
+.btn-r{background:#FEF2F2;color:#991B1B;border:1.5px solid #FECACA}
+
+/* MODAL */
+.ov{position:fixed;inset:0;background:rgba(12,27,46,.72);z-index:500;display:flex;align-items:flex-end;backdrop-filter:blur(3px)}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:22px 18px 48px;width:100%;max-width:480px;margin:0 auto;animation:slideup .26s ease}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal h2{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--ink);margin-bottom:5px}
+.modal p{font-size:12.5px;color:var(--t2);margin-bottom:13px;line-height:1.6}
+.msteps{background:var(--surf2);border-radius:8px;padding:11px 14px;margin-bottom:14px;border:1px solid var(--bdr2)}
+.msteps li{font-size:11.5px;color:var(--t2);line-height:1.8;margin-left:14px}
+.minp{width:100%;padding:11px 12px;background:var(--surf2);border:1.5px solid var(--bdr);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--t1);outline:none;margin-bottom:8px;transition:border-color .18s}
+.minp:focus{border-color:var(--steel)}
+.mbtns{display:flex;gap:8px}
+.tres{padding:8px 11px;border-radius:7px;font-size:11.5px;font-weight:500;margin-bottom:9px;display:none}
+.tres.ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;display:block}
+.tres.er{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;display:block}
+
+/* TOAST */
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;padding:10px 20px;border-radius:24px;font-size:12.5px;font-weight:500;opacity:0;transition:all .26s;z-index:600;pointer-events:none;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.28)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+.fi{animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL -->
+<div class="ov hidden" id="ov">
+  <div class="modal">
+    <h2>&#128279; Connect Google Sheets</h2>
+    <p>The app fetches <b>live data directly from Google Sheets</b> every time you open a site. You must deploy the Apps Script first.</p>
+    <ol class="msteps">
+      <li>Open your Google Sheet &rarr; <b>Extensions &rarr; Apps Script</b></li>
+      <li>Delete ALL old code &rarr; paste the new <b>APPS_SCRIPT_CODE.js</b> &rarr; Save</li>
+      <li><b>Deploy &rarr; New Deployment &rarr; Web App</b></li>
+      <li>Execute as: <b>Me</b> &nbsp;|&nbsp; Access: <b>Anyone</b></li>
+      <li>Authorise &rarr; copy the <code style="background:#EFF6FF;padding:0 5px;border-radius:3px;font-size:10px">/exec</code> URL</li>
+    </ol>
+    <input class="minp" id="urlInp" type="url" placeholder="https://script.google.com/macros/s/.../exec"/>
+    <div class="tres" id="tres"></div>
+    <div class="mbtns">
+      <button class="btn btn-g" style="flex:.5" onclick="closeSetup()">Cancel</button>
+      <button class="btn btn-g" style="flex:.7;border-color:var(--steel);color:var(--steel)" onclick="doTest()">&#129514; Test</button>
+      <button class="btn btn-p" onclick="saveURL()">&#10003; Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="sb">
+  <span class="sb-l" id="clk">--:--</span>
+  <span class="sb-r">SDCA Manager v3 &middot; Live Sheets</span>
+</div>
+
+<!-- APP BAR -->
+<div class="ab">
+  <div class="ab-row">
+    <div>
+      <div class="ab-tag">Gadwal Telecom Circle</div>
+      <div class="ab-title">&#9889; SDCA Field Manager</div>
+      <div class="ab-sub">Live Google Sheets &middot; All Columns &middot; Real-time Sync</div>
+    </div>
+    <div id="hdPill" class="ab-pill">SELECT SDCA</div>
+  </div>
+  <div class="prog-t"><div class="prog-f" id="prog"></div></div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat"><div class="stat-n">3</div><div class="stat-l">SDCAs</div></div>
+  <div class="stat"><div class="stat-n">46</div><div class="stat-l">Sites</div></div>
+  <div class="stat"><div class="stat-n" id="chgN">0</div><div class="stat-l">Changes</div></div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- Connect bar -->
+  <div class="cbar idle" id="cbar" onclick="openSetup()">
+    <div class="cdot"></div>
+    <span id="cbarTxt">Tap to connect Google Sheets (required for live data)</span>
+    <svg style="margin-left:auto;flex-shrink:0" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+  </div>
+
+  <!-- STEP 1 — SDCA -->
+  <div class="card">
+    <div class="chd hid">
+      <div class="chd-ico">&#128205;</div>
+      <span class="chd-ttl">Step 1 &mdash; Select SDCA</span>
+    </div>
+    <div class="cbdy">
+      <div class="fl">
+        <label class="fl-lb">SDCA Code</label>
+        <div class="sw">
+          <select class="fl-sl" id="selSDCA" onchange="onSDCA()">
+            <option value="">&mdash; Choose SDCA &mdash;</option>
+            <option value="ATMAKUR">ATK &mdash; ATMAKUR (10 sites)</option>
+            <option value="GADWAL">GWL &mdash; GADWAL (17 sites)</option>
+            <option value="SHANTINAGAR">STN &mdash; SHANTINAGAR (19 sites)</option>
+          </select>
+          <span class="sch"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — Site -->
+  <div class="card" id="cardSite" style="opacity:.35;pointer-events:none;transition:opacity .3s">
+    <div class="chd hid">
+      <div class="chd-ico">&#127959;</div>
+      <span class="chd-ttl">Step 2 &mdash; Select Site</span>
+    </div>
+    <div class="cbdy">
+      <div class="fl">
+        <label class="fl-lb">Site Name</label>
+        <div class="sw">
+          <select class="fl-sl" id="selSite" onchange="onSite()" disabled>
+            <option value="">&mdash; Select SDCA first &mdash;</option>
+          </select>
+          <span class="sch"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — Fields (loaded live) -->
+  <div id="secEdit" class="hidden">
+    <div class="ibox">
+      <span style="font-size:15px;flex-shrink:0">&#9889;</span>
+      <p><b>Live data from Google Sheets.</b> Every field from the sheet is shown. <span style="color:var(--gold2);font-weight:600">Amber</span> = unsaved change. Sites with multiple rows show each row as a separate block.</p>
+    </div>
+    <div class="tabs" id="tabsRow">
+      <div class="tab on" onclick="setTab(this,'all')">&#128203; All</div>
+      <div class="tab" onclick="setTab(this,'id')">&#127991; Identity</div>
+      <div class="tab" onclick="setTab(this,'pp')">&#9728; Power Plant</div>
+      <div class="tab" onclick="setTab(this,'bty')">&#128267; Battery</div>
+      <div class="tab" onclick="setTab(this,'dg')">&#9881; DG Set</div>
+      <div class="tab" onclick="setTab(this,'ac')">&#10052; AC</div>
+    </div>
+    <div id="fRoot"></div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bbar" id="bbar">
+  <button class="btn btn-g" style="flex:.4" onclick="doRefresh()">&#8635; Refresh</button>
+  <button class="btn btn-g" style="flex:.4" onclick="doReset()">&#8617; Reset</button>
+  <button class="btn btn-p" id="btnSync" onclick="doSync()">&#9729; Sync</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ================================================================
+//  SHEET CONFIG — exact column layout for each sheet
+//  col index is 0-based here, +1 when writing to sheet (1-based)
+// ================================================================
+const SHEETS = {
+  ATMAKUR: {
+    siteCol: 6,  // SITE NAME is column G (index 6)
+    sdcaCode: 'ATK',
+    cols: ['SLNO','SDCA','ENTITY CODE','USC NO','SERVICE NO','MANDAL','SITE NAME',
+           'EARTH RESISTENCE','AMC','MAKE','PP CAPACITY','MaxNoOfModules',
+           'PerModuleCapacity','PP_DateOfInstall','NoOfModulesAvbl','NoOfModulesWkg',
+           'DcOutputCurrent','PP MODEL NO','Sl.No of PP','Sl.No of PP Module-1',
+           'Sl.No of PP Module-2','Sl.No of PP Module-3','Sl.No of PP Module-4',
+           'BTY01_Make','BTY01_Capacity','BTY01_Doi',
+           'BTY02_Make','BTY02_Capacity','BTY02_Doi',
+           'DG MAKE','DG CAPACITY(KVA)','DG DOI','STATUS',
+           'AC MAKE','AC CAPACITY','AC DOI']
+  },
+  GADWAL: {
+    siteCol: 5,  // SITE NAME is column F (index 5)
+    sdcaCode: 'GWL',
+    cols: ['SLNO','SDCA','ENTITY CODE','USC NO','MANDAL','SITE NAME',
+           'EARTH RESISTENCE','AMC','MAKE/YEAR','PP CAPACITY','PO NUMBER',
+           'MaxNoOfModules','PerModuleCapacity','PP_DateOfInstall',
+           'NoOfModulesAvbl','NoOfModulesWkg','DcOutputCurrent','LSP DOI',
+           'PP MODEL NO','Sl.No of PP','Sl.No of PP Module-1','Sl.No of PP Module-2',
+           'Sl.No of PP Module-3','Sl.No of PP Module-4','Sl.No of PP Module-4(B)',
+           'BTY01_Make','BTY01_Capacity','BTY01_Doi',
+           'BTY02_Make','BTY02_Capacity','BTY02_Doi',
+           'DG MAKE','DG CAPACITY','DG DOI','STATUS',
+           'AC MAKE','AC CAPACITY','AC DOI']
+  },
+  SHANTINAGAR: {
+    siteCol: 4,  // SITE NAME is column E (index 4)
+    sdcaCode: 'STN',
+    cols: ['SLNO','SDCA','ENTITY CODE','MANDAL','SITE NAME','EARTH RESISTENCE',
+           'AMC','MAKE','PP CAPACITY','PO NUMBER','MaxNoOfModules','PerModuleCapacity',
+           'PP_DateOfInstall','NoOfModulesAvbl','NoOfModulesWkg','DcOutputCurrent',
+           'LSP DOI','PP MODEL NO','Sl.No of PP','Sl.No of PP Module-1',
+           'Sl.No of PP Module-2','Sl.No of PP Module-3','Sl.No of PP Module-4',
+           'Sl.No of PP Module-5','Sl.No of PP Module-6',
+           'BTY01_Make','BTY01_Capacity','BTY01_Doi',
+           'BTY02_Make','BTY02_Capacity','BTY02_Doi',
+           'DG MAKE','DG CAPACITY','DG DOI','STATUS',
+           'AC MAKE','AC CAPACITY']
+  }
+};
+
+// Which category each column belongs to (for tabs)
+const COL_CAT = {
+  'SLNO':'id','SDCA':'id','ENTITY CODE':'id','USC NO':'id','SERVICE NO':'id',
+  'MANDAL':'id','SITE NAME':'id','EARTH RESISTENCE':'id','STATUS':'id',
+  'AMC':'pp','MAKE':'pp','MAKE/YEAR':'pp','PP CAPACITY':'pp','PO NUMBER':'pp',
+  'MaxNoOfModules':'pp','PerModuleCapacity':'pp','PP_DateOfInstall':'pp',
+  'NoOfModulesAvbl':'pp','NoOfModulesWkg':'pp','DcOutputCurrent':'pp',
+  'LSP DOI':'pp','PP MODEL NO':'pp','Sl.No of PP':'pp','Sl.No of PP Module-1':'pp',
+  'Sl.No of PP Module-2':'pp','Sl.No of PP Module-3':'pp','Sl.No of PP Module-4':'pp',
+  'Sl.No of PP Module-4(B)':'pp','Sl.No of PP Module-5':'pp','Sl.No of PP Module-6':'pp',
+  'BTY01_Make':'bty','BTY01_Capacity':'bty','BTY01_Doi':'bty',
+  'BTY02_Make':'bty','BTY02_Capacity':'bty','BTY02_Doi':'bty',
+  'DG MAKE':'dg','DG CAPACITY':'dg','DG CAPACITY(KVA)':'dg','DG DOI':'dg',
+  'AC MAKE':'ac','AC CAPACITY':'ac','AC DOI':'ac','DOI':'ac',
+};
+
+const COL_LABEL = {
+  'SLNO':'Sl. No.','SDCA':'SDCA','ENTITY CODE':'Entity Code','USC NO':'USC No.',
+  'SERVICE NO':'Service No.','MANDAL':'Mandal','SITE NAME':'Site Name',
+  'EARTH RESISTENCE':'Earth Resistance','STATUS':'Status','AMC':'AMC',
+  'MAKE':'PP Make','MAKE/YEAR':'PP Make / Year','PP CAPACITY':'PP Capacity',
+  'PO NUMBER':'PO Number','MaxNoOfModules':'Max Modules',
+  'PerModuleCapacity':'Per Module Capacity (W)','PP_DateOfInstall':'PP Date of Install',
+  'NoOfModulesAvbl':'Modules Available','NoOfModulesWkg':'Modules Working',
+  'DcOutputCurrent':'DC Output Current (A)','LSP DOI':'LSP Date of Install',
+  'PP MODEL NO':'PP Model No.','Sl.No of PP':'PP Serial No.',
+  'Sl.No of PP Module-1':'Module-1 Serial','Sl.No of PP Module-2':'Module-2 Serial',
+  'Sl.No of PP Module-3':'Module-3 Serial','Sl.No of PP Module-4':'Module-4 Serial',
+  'Sl.No of PP Module-4(B)':'Module-4 Serial (B)','Sl.No of PP Module-5':'Module-5 Serial',
+  'Sl.No of PP Module-6':'Module-6 Serial',
+  'BTY01_Make':'Battery-1 Make','BTY01_Capacity':'Battery-1 Capacity (Ah)','BTY01_Doi':'Battery-1 DOI',
+  'BTY02_Make':'Battery-2 Make','BTY02_Capacity':'Battery-2 Capacity (Ah)','BTY02_Doi':'Battery-2 DOI',
+  'DG MAKE':'DG Make','DG CAPACITY':'DG Capacity (KVA)','DG CAPACITY(KVA)':'DG Capacity (KVA)',
+  'DG DOI':'DG Date of Install',
+  'AC MAKE':'AC Make','AC CAPACITY':'AC Capacity (Ton)','AC DOI':'AC Date of Install','DOI':'AC Date of Install',
+};
+
+const CAT_META = {
+  id: {icon:'🏷️', title:'Identity & Location', hcls:'hid'},
+  pp: {icon:'☀️',  title:'Power Plant',          hcls:'hpp'},
+  bty:{icon:'🔋',  title:'Battery System',        hcls:'hbt'},
+  dg: {icon:'⚙️',  title:'Diesel Generator',      hcls:'hdg'},
+  ac: {icon:'❄️',  title:'Air Conditioning',      hcls:'hac'},
+};
+
+// ── STATE ──────────────────────────────────────────────────────
+let scriptURL = localStorage.getItem('sdcaURL') || '';
+let curSheet  = null;   // e.g. 'GADWAL'
+let curSite   = null;   // site name string
+let curCat    = 'all';
+
+// liveRows: array of raw sheet rows (each row = array of cell strings)
+// Each element: {rowNum (1-based sheet row), cells: [...]}
+let liveRows  = [];     // loaded from Google Sheets
+let origRows  = [];     // snapshot at load time (for dirty detection)
+let editBuf   = [];     // user edits: same structure as liveRows
+
+// All rows for current sheet (loaded once per SDCA selection)
+let allSheetRows = [];  // [{rowNum, cells}]
+let siteMap   = {};     // siteName -> [{rowNum, cells}, ...]
+
+// ── INIT ──────────────────────────────────────────────────────
+window.onload = () => {
+  tick(); setInterval(tick, 30000);
+  refreshCBar();
+  if (!scriptURL) setTimeout(() => document.getElementById('ov').classList.remove('hidden'), 1200);
+};
+function tick() {
+  const d = new Date();
+  document.getElementById('clk').textContent = p2(d.getHours()) + ':' + p2(d.getMinutes());
+}
+function p2(n) { return String(n).padStart(2,'0'); }
+
+// ── SETUP MODAL ───────────────────────────────────────────────
+function openSetup() {
+  document.getElementById('urlInp').value = scriptURL || '';
+  document.getElementById('tres').className = 'tres';
+  document.getElementById('ov').classList.remove('hidden');
+}
+function closeSetup() { document.getElementById('ov').classList.add('hidden'); }
+function saveURL() {
+  const v = document.getElementById('urlInp').value.trim();
+  if (!v || !v.includes('script.google.com')) { alert('Please enter a valid Google Apps Script /exec URL'); return; }
+  scriptURL = v;
+  localStorage.setItem('sdcaURL', v);
+  closeSetup();
+  refreshCBar();
+  toast('✅ Connected! Select an SDCA to load live data.');
+}
+function doTest() {
+  const url = document.getElementById('urlInp').value.trim();
+  if (!url) { alert('Enter URL first'); return; }
+  const el = document.getElementById('tres');
+  el.className = 'tres'; el.textContent = 'Testing…'; el.style.display = 'block';
+  jsonp(url, {test: true}, () => { el.className = 'tres ok'; el.textContent = '✅ Connected — API v3 ready!'; },
+    e => { el.className = 'tres er'; el.textContent = '❌ ' + e; });
+}
+function refreshCBar(state, msg) {
+  const b = document.getElementById('cbar'), t = document.getElementById('cbarTxt');
+  if (!state) {
+    b.className = 'cbar ' + (scriptURL ? 'ok' : 'idle');
+    t.textContent = scriptURL ? '✓ Connected to Google Sheets — data is live' : 'Tap to connect Google Sheets (required for live data)';
+    return;
+  }
+  b.className = 'cbar ' + state; t.textContent = msg || '';
+}
+
+// ── SDCA SELECTION ────────────────────────────────────────────
+function onSDCA() {
+  curSheet = document.getElementById('selSDCA').value;
+  const cs = document.getElementById('cardSite'), ss = document.getElementById('selSite');
+  document.getElementById('secEdit').classList.add('hidden');
+  document.getElementById('bbar').style.display = 'none';
+  curSite = null; liveRows = []; origRows = []; editBuf = [];
+  siteMap = {}; allSheetRows = [];
+
+  if (!curSheet) {
+    cs.style.opacity = '.35'; cs.style.pointerEvents = 'none';
+    setProg(0); setPill('SELECT SDCA'); return;
+  }
+
+  cs.style.opacity = '1'; cs.style.pointerEvents = '';
+  ss.disabled = false;
+  ss.innerHTML = '<option value="">Loading sites…</option>';
+  const labels = {ATMAKUR:'ATK · ATMAKUR', GADWAL:'GWL · GADWAL', SHANTINAGAR:'STN · SHANTINAGAR'};
+  setPill(labels[curSheet]); setProg(15);
+
+  if (!scriptURL) {
+    ss.innerHTML = '<option value="">⚠ Connect Google Sheets first</option>';
+    toast('⚠ Please connect Google Sheets first'); openSetup(); return;
+  }
+
+  // Load all rows for this sheet
+  loadSheet(curSheet);
+}
+
+function loadSheet(sheetName) {
+  refreshCBar('busy', '⏳ Loading ' + sheetName + ' from Google Sheets…');
+  const cfg = SHEETS[sheetName];
+
+  jsonp(scriptURL, null, data => {
+    if (data.status !== 'success' || !data.rows) {
+      refreshCBar('err', '❌ Failed to load sheet: ' + (data.message || 'Unknown error'));
+      toast('❌ Could not load sheet data');
+      return;
+    }
+
+    allSheetRows = data.rows.map((cells, i) => ({
+      rowNum: data.startRow + i,  // actual 1-based row in Google Sheet
+      cells: cells
+    }));
+
+    // Build site map — group rows by site name
+    siteMap = {};
+    let curSiteName = null;
+    allSheetRows.forEach(rowObj => {
+      const siteVal = (rowObj.cells[cfg.siteCol] || '').trim();
+      if (siteVal) curSiteName = siteVal;
+      if (!curSiteName) return;
+      if (!siteMap[curSiteName]) siteMap[curSiteName] = [];
+      siteMap[curSiteName].push(rowObj);
+    });
+
+    // Populate site dropdown
+    const ss = document.getElementById('selSite');
+    ss.innerHTML = '<option value="">— Select a site —</option>';
+    Object.keys(siteMap).forEach(s => {
+      const o = document.createElement('option'); o.value = s; o.textContent = s; ss.appendChild(o);
+    });
+
+    refreshCBar('ok', '✓ Loaded ' + Object.keys(siteMap).length + ' sites from Google Sheets');
+    setProg(33);
+    setTimeout(refreshCBar, 4000);
+  }, e => {
+    refreshCBar('err', '❌ Load failed: ' + e);
+    toast('❌ Could not reach Google Sheets');
+    document.getElementById('selSite').innerHTML = '<option value="">❌ Load failed — check connection</option>';
+  }, 'read', sheetName);
+}
+
+// ── SITE SELECTION ────────────────────────────────────────────
+function onSite() {
+  curSite = document.getElementById('selSite').value;
+  if (!curSite) {
+    document.getElementById('secEdit').classList.add('hidden');
+    document.getElementById('bbar').style.display = 'none';
+    setProg(33); return;
+  }
+
+  // Deep copy rows for this site
+  const rows = siteMap[curSite] || [];
+  liveRows  = rows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+  origRows  = rows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+  editBuf   = rows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+
+  curCat = 'all';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelector('.tab').classList.add('on');
+  document.getElementById('secEdit').classList.remove('hidden');
+  document.getElementById('bbar').style.display = 'flex';
+  setProg(66);
+  renderFields();
+  updateCnt();
+  setTimeout(() => document.getElementById('secEdit').scrollIntoView({behavior:'smooth', block:'start'}), 90);
+}
+
+// ── TABS ──────────────────────────────────────────────────────
+function setTab(el, cat) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on'); curCat = cat; renderFields();
+}
+
+// ── RENDER FIELDS ─────────────────────────────────────────────
+function renderFields() {
+  const root = document.getElementById('fRoot');
+  root.innerHTML = ''; root.className = 'fi';
+
+  const cfg  = SHEETS[curSheet];
+  const cols = cfg.cols;
+  const cats = curCat === 'all' ? ['id','pp','bty','dg','ac'] : [curCat];
+  const nRows = editBuf.length;
+
+  cats.forEach(cat => {
+    const m = CAT_META[cat];
+    // Which column indices belong to this cat?
+    const catColIdxs = cols.map((c, i) => (COL_CAT[c] === cat) ? i : -1).filter(i => i >= 0);
+    if (!catColIdxs.length) return;
+
+    // Count non-empty values across all rows for badge
+    let totalVals = 0;
+    catColIdxs.forEach(ci => {
+      editBuf.forEach(r => { if ((r.cells[ci] || '').trim()) totalVals++; });
+    });
+
+    const card = document.createElement('div'); card.className = 'card';
+    const hd = document.createElement('div'); hd.className = 'chd ' + m.hcls;
+    hd.innerHTML = '<div class="chd-ico">' + m.icon + '</div>' +
+      '<span class="chd-ttl">' + m.title + '</span>' +
+      '<span class="chd-cnt">' + totalVals + '</span>';
+    card.appendChild(hd);
+
+    const body = document.createElement('div'); body.className = 'cbdy';
+
+    if (nRows === 1) {
+      // Single row — simple list of fields
+      renderColsInto(body, catColIdxs, 0, cat);
+    } else {
+      // Multiple rows — each row as a labelled block
+      editBuf.forEach((rowObj, ri) => {
+        // Only show block if this row has any data in this cat
+        const hasData = catColIdxs.some(ci => (rowObj.cells[ci] || '').trim());
+        if (!hasData) return;
+
+        const block = document.createElement('div');
+        const div = document.createElement('div'); div.className = 'rdiv';
+        div.innerHTML = '<div class="rdiv-ln"></div><span class="rdiv-lbl">Row ' + (ri + 1) + ' · Sheet row ' + rowObj.rowNum + '</span><div class="rdiv-ln"></div>';
+        block.appendChild(div);
+        renderColsInto(block, catColIdxs, ri, cat);
+        body.appendChild(block);
+      });
+    }
+
+    card.appendChild(body);
+    root.appendChild(card);
+  });
+
+  if (!root.children.length) {
+    root.innerHTML = '<div style="text-align:center;padding:22px 0;color:var(--t4);font-size:13px">No data for this category</div>';
+  }
+}
+
+function renderColsInto(container, colIdxs, rowIdx, cat) {
+  const cfg  = SHEETS[curSheet];
+  const cols = cfg.cols;
+  const rowObj = editBuf[rowIdx];
+  const origObj = origRows[rowIdx];
+
+  // Use two-column layout for small fields (dg, ac) or identity basics
+  const useTwoCol = (cat === 'dg' || cat === 'ac') && colIdxs.length >= 2;
+  const wrap = useTwoCol ? Object.assign(document.createElement('div'), {className:'two'}) : container;
+  if (useTwoCol) container.appendChild(wrap);
+
+  colIdxs.forEach(ci => {
+    const colName = cols[ci];
+    const val     = (rowObj.cells[ci] || '').trim();
+    const origVal = origObj ? (origObj.cells[ci] || '').trim() : '';
+    const dirty   = val !== origVal;
+    const label   = COL_LABEL[colName] || colName;
+
+    const fl = document.createElement('div'); fl.className = 'fl';
+    fl.innerHTML =
+      '<label class="fl-lb">' + esc(label) + '</label>' +
+      '<input class="fl-in' + (dirty ? ' dirty' : '') + '" ' +
+      'data-ri="' + rowIdx + '" data-ci="' + ci + '" ' +
+      'type="text" value="' + esc(val) + '" placeholder="—" autocomplete="off" ' +
+      'oninput="onInp(this)"/>';
+    wrap.appendChild(fl);
+  });
+}
+
+// ── INPUT HANDLER ─────────────────────────────────────────────
+function onInp(el) {
+  const ri = parseInt(el.dataset.ri);
+  const ci = parseInt(el.dataset.ci);
+  editBuf[ri].cells[ci] = el.value;
+  const origVal = origRows[ri] ? (origRows[ri].cells[ci] || '').trim() : '';
+  el.classList.toggle('dirty', el.value.trim() !== origVal);
+  updateCnt();
+}
+
+function updateCnt() {
+  let n = 0;
+  editBuf.forEach((rowObj, ri) => {
+    rowObj.cells.forEach((v, ci) => {
+      const orig = origRows[ri] ? (origRows[ri].cells[ci] || '') : '';
+      if ((v || '') !== orig) n++;
+    });
+  });
+  document.getElementById('chgN').textContent = n;
+  document.getElementById('btnSync').textContent = n > 0 ? '☁ Sync ' + n + ' change' + (n > 1 ? 's' : '') : '☁ Sync';
+}
+
+// ── JSONP ─────────────────────────────────────────────────────
+let _jn = 0;
+function jsonp(url, payload, ok, err, action, sheet) {
+  const fn = '_cb' + (++_jn);
+  const t  = setTimeout(() => { delete window[fn]; err && err('Timeout after 15s'); }, 15000);
+  window[fn] = r => {
+    clearTimeout(t); delete window[fn];
+    (r && (r.status === 'success' || r.status === 'ok')) ? ok(r) : err(r ? (r.message || 'Script error') : 'Empty response');
+  };
+  let src = url + '?callback=' + fn;
+  if (action) src += '&action=' + action;
+  if (sheet)  src += '&sheet='  + encodeURIComponent(sheet);
+  if (payload) src += '&payload=' + encodeURIComponent(JSON.stringify(payload));
+  const s = document.createElement('script');
+  s.src = src;
+  s.onerror = () => { clearTimeout(t); delete window[fn]; err && err('Network error'); };
+  document.head.appendChild(s);
+  setTimeout(() => { try { document.head.removeChild(s); } catch(e) {} }, 16000);
+}
+
+// ── SYNC TO SHEETS ────────────────────────────────────────────
+function doSync() {
+  if (!curSite || !scriptURL) { if (!scriptURL) openSetup(); return; }
+
+  const updates = [];
+  editBuf.forEach((rowObj, ri) => {
+    rowObj.cells.forEach((v, ci) => {
+      const orig = origRows[ri] ? (origRows[ri].cells[ci] || '') : '';
+      if ((v || '') !== orig) {
+        updates.push({ row: rowObj.rowNum, col: ci + 1, value: v });
+      }
+    });
+  });
+
+  if (!updates.length) { toast('ℹ No changes to sync'); return; }
+
+  // Commit locally immediately
+  origRows = editBuf.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+  document.querySelectorAll('.fl-in.dirty').forEach(el => el.classList.remove('dirty'));
+  document.getElementById('chgN').textContent = '0';
+  document.getElementById('btnSync').textContent = '☁ Sync';
+  setProg(100); setTimeout(() => setProg(66), 700);
+
+  refreshCBar('busy', '⏳ Writing ' + updates.length + ' cell(s) to Google Sheets…');
+  document.getElementById('btnSync').disabled = true;
+
+  jsonp(scriptURL, { sheetName: curSheet, updates },
+    r => {
+      document.getElementById('btnSync').disabled = false;
+      refreshCBar('ok', '✅ Synced ' + updates.length + ' cell(s) — Google Sheet updated');
+      toast('✅ Google Sheet updated! ' + updates.length + ' cell(s) written.');
+      setTimeout(refreshCBar, 5000);
+    },
+    e => {
+      document.getElementById('btnSync').disabled = false;
+      refreshCBar('err', '❌ Sync failed: ' + e);
+      toast('❌ Sync failed — tap bar to reconnect');
+    }
+  );
+}
+
+// ── REFRESH — reload live data for current site ───────────────
+function doRefresh() {
+  if (!curSite || !curSheet) return;
+  const savedSite = curSite;
+  document.getElementById('fRoot').innerHTML =
+    '<div class="spin-wrap"><div class="spin"></div><div class="spin-txt">Loading live data…</div></div>';
+  refreshCBar('busy', '⏳ Refreshing data from Google Sheets…');
+
+  jsonp(scriptURL, null, data => {
+    if (data.status !== 'success' || !data.rows) {
+      refreshCBar('err', '❌ Refresh failed');
+      toast('❌ Refresh failed'); return;
+    }
+    const cfg = SHEETS[curSheet];
+    allSheetRows = data.rows.map((cells, i) => ({ rowNum: data.startRow + i, cells }));
+    siteMap = {};
+    let csn = null;
+    allSheetRows.forEach(r => {
+      const sv = (r.cells[cfg.siteCol] || '').trim();
+      if (sv) csn = sv;
+      if (!csn) return;
+      if (!siteMap[csn]) siteMap[csn] = [];
+      siteMap[csn].push(r);
+    });
+    const rows = siteMap[savedSite] || [];
+    liveRows  = rows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+    origRows  = rows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+    editBuf   = rows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+    renderFields(); updateCnt();
+    refreshCBar('ok', '✅ Refreshed — showing latest Google Sheets data');
+    toast('✅ Showing latest data from Google Sheets');
+    setTimeout(refreshCBar, 4000);
+  }, e => {
+    refreshCBar('err', '❌ Refresh failed: ' + e);
+    toast('❌ Refresh failed');
+    renderFields();
+  }, 'read', curSheet);
+}
+
+// ── RESET to last loaded values ────────────────────────────────
+function doReset() {
+  if (!curSite) return;
+  editBuf = origRows.map(r => ({ rowNum: r.rowNum, cells: [...r.cells] }));
+  renderFields(); updateCnt(); toast('↺ Reset to last loaded values');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function setProg(p) { document.getElementById('prog').style.width = p + '%'; }
+function setPill(t) { document.getElementById('hdPill').textContent = t; }
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
